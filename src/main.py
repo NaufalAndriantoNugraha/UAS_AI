@@ -1,88 +1,51 @@
-"""
-Title: Naive Bayes Classifier
-Deskripsi: Implementasi Naive Bayes Classifier dalam Memprediksi Kelulusan Mahasiswa
-Author: M. Farhan Nabil (23051204373), Naufal Andrianto Nugraha (23051204373)
-"""
-
 import pandas as pd
-import matplotlib.pyplot as plt
-
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import accuracy_score 
-from sklearn.metrics import classification_report
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
 
+# Load dataset
+dataset = pd.read_csv("data/dataset.csv")
 
+# Memisahkan fitur (X) dan label (y)
+X = dataset.drop(columns=["Target"])
+y = dataset["Target"]
 
-def main():
-    data_path = "data/dataset.csv"
-    data_set = pd.read_csv(data_path)
+# Fungsi untuk melatih dan mengevaluasi model pada berbagai skenario
+def evaluate_naive_bayes(train_size, test_size, scenario_name):
+    # Membagi dataset
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, train_size=train_size, test_size=test_size, random_state=42
+    )
 
-    data_set.head()
-    data_set.info()
-
-    # Separate features and target
-    X = data_set.drop(columns=['Target'])
-    y = data_set['Target']
-
-    # Split data into training (500 samples) and testing (400 samples)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=500, test_size=400, random_state=42, stratify=y)
-
-    # Convert categorical columns to numeric if necessary
-    X_train = pd.get_dummies(X_train, drop_first=True)
-    X_test = pd.get_dummies(X_test, drop_first=True)
-
-    # Ensure columns are aligned between train and test sets
-    X_train, X_test = X_train.align(X_test, join='left', axis=1)
-    X_test.fillna(0, inplace=True)
-
-    # Initialize and train Naive Bayes classifier
+    # Melatih model Naive Bayes
     model = GaussianNB()
     model.fit(X_train, y_train)
 
-    # Make predictions
+    # Prediksi
     y_pred = model.predict(X_test)
 
-    # Evaluate the model
+    # Evaluasi performa
     accuracy = accuracy_score(y_test, y_pred)
-    report = classification_report(y_test, y_pred)
+    report = classification_report(y_test, y_pred, output_dict=True)
 
-    print(f"Akurasi: {accuracy}")
-    print(f"Report: {report}")
-    print("")
+    print(f"\n=== Scenario {scenario_name} ===")
+    print(f"Train size: {len(X_train)}, Test size: {len(X_test)}")
+    print(f"Accuracy: {accuracy:.4f}")
+    print("Classification Report:")
+    print(classification_report(y_test, y_pred))
 
-    # ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, cmap='Blues')
-    # plt.title("Confusion Matrix")
-    # plt.show()
-
-    report_dict = classification_report(y_test, y_pred, output_dict=True)
-    df_report = pd.DataFrame(report_dict).transpose()
-
-    # Define evaluation metrics for the current model
-    metrics = ["Accuracy", "Precision", "Recall", "F1-Score"]
-    values = [
-        accuracy * 100,  # Accuracy
-        df_report.loc["weighted avg", "precision"] * 100,  # Weighted Precision
-        df_report.loc["weighted avg", "recall"] * 100,  # Weighted Recall
-        df_report.loc["weighted avg", "f1-score"] * 100,  # Weighted F1-Score
-    ]
-
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    plt.plot(metrics, values, marker='o', label="Skenario 1")
-
-    # Customize the chart
-    plt.title("Evaluasi Model Naive Bayes", fontsize=16)
-    plt.ylabel("Score (%)", fontsize=12)
-    plt.ylim(0, 100)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    plt.legend(loc='lower right', fontsize=12)
-    plt.tight_layout()
-
-    # Show the plot
+    # Confusion Matrix
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=model.classes_, yticklabels=model.classes_)
+    plt.title(f"Confusion Matrix - Scenario {scenario_name}")
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
     plt.show()
 
-
-if __name__ == "__main__":
-    main()
+# Menjalankan tiga skenario
+evaluate_naive_bayes(train_size=400, test_size=100, scenario_name="1 (400 train, 100 test)")
+evaluate_naive_bayes(train_size=250, test_size=250, scenario_name="2 (250 train, 250 test)")
+evaluate_naive_bayes(train_size=100, test_size=400, scenario_name="3 (100 train, 400 test)")
